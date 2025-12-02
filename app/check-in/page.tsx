@@ -41,6 +41,7 @@ export default function CheckInPage() {
     method: "POST",
     });
 
+    await fetch("/api/check-achievements", { method: "POST" });
 
     const checkInId = data.id;
 

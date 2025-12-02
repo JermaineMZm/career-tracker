@@ -37,6 +37,11 @@ export default async function DashboardPage() {
   .eq("user_id", user.id)
   .single();
 
+  const { data: achievements } = await supabase
+  .from("achievements")
+  .select("*")
+  .eq("user_id", user.id)
+  .order("unlocked_at", { ascending: false });
 
   return (
     <div className="min-h-screen bg-gray-100 text-black p-10">
@@ -69,6 +74,26 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
+      {/* ACHIEVEMENTS */}
+      <div className="bg-white p-6 rounded shadow mb-6">
+        <h2 className="text-xl font-semibold mb-3">Achievements</h2>
+
+        {!achievements || achievements.length === 0 ? (
+          <p>No achievements yet — keep going!</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {achievements.map((ach) => (
+              <div
+                key={ach.id}
+                className="p-4 border rounded bg-gradient-to-br from-yellow-100 to-yellow-200"
+              >
+                <p className="font-bold text-lg">{ach.title}</p>
+                <p className="text-sm text-gray-600">{ach.description}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* ROADMAP SUMMARY BOX */}
       <div className="bg-white p-6 rounded shadow mb-6">
