@@ -11,22 +11,21 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
         <Auth
-        supabaseClient={supabase}
-        appearance={{
+          supabaseClient={supabase}
+          appearance={{
             theme: ThemeSupa,
             variables: {
-            default: {
+              default: {
                 colors: {
-                brand: '#3b82f6',
-                brandAccent: '#1d4ed8',
-                inputBackground: '#111827',
-                inputText: 'white'
-                }
-            }
-            }
-        }}
-        theme="dark"
-        providers={[]}
+                  brand: "#2563eb",
+                  brandAccent: "#1e40af",
+                  inputText: "#111",
+                  labelText: "#111",
+                },
+              },
+            },
+          }}
+          providers={[]}
         />
       </div>
     </div>

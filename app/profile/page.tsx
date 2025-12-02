@@ -50,6 +50,27 @@ export default function ProfilePage() {
     alert("Saved!");
   }
 
+  async function generateRoadmap() {
+  const res = await fetch("/api/generate-roadmap", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      currentRole,
+      targetRole,
+    }),
+  });
+
+  const data = await res.json();
+
+  if (data.error) {
+    alert("Error: " + data.error);
+    return;
+  }
+
+  alert("Roadmap generated!");
+}
+
+
   if (loading) return <p className="p-10">Loading...</p>;
 
   return (
@@ -78,6 +99,22 @@ export default function ProfilePage() {
       >
         Save
       </button>
+
+      <button
+        onClick={generateRoadmap}
+        className="bg-green-600 text-white px-4 py-2 rounded mt-4"
+        >
+        Generate AI Roadmap
+        </button>
+
+        <a
+            href="/roadmap"
+            className="text-blue-600 underline block mt-4"
+            >
+            View Roadmap
+            </a>
+
+
     </div>
   );
 }
