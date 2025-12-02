@@ -31,6 +31,13 @@ export default async function DashboardPage() {
 
   const lastCheckIn = checkIns?.[0];
 
+  const { data: userStats } = await supabase
+  .from("user_stats")
+  .select("*")
+  .eq("user_id", user.id)
+  .single();
+
+
   return (
     <div className="min-h-screen bg-gray-100 text-black p-10">
       <h1 className="text-3xl font-bold mb-4">
@@ -40,6 +47,28 @@ export default async function DashboardPage() {
       <p className="mb-8 text-gray-700">
         Here’s how you're progressing this week.
       </p>
+
+      {/* STREAK BOX */}
+      <div className="bg-white p-6 rounded shadow mb-6">
+        <h2 className="text-xl font-semibold mb-3">Your Streak</h2>
+
+        {!userStats ? (
+          <p>No streak yet — make a check-in!</p>
+        ) : (
+          <div>
+            <p><strong>Current streak:</strong> {userStats.current_streak} days 🔥</p>
+            <p><strong>Longest streak:</strong> {userStats.longest_streak} days 🏆</p>
+          </div>
+        )}
+
+        <Link
+          href="/check-in"
+          className="text-blue-600 underline block mt-3"
+        >
+          Make a Check-In →
+        </Link>
+      </div>
+
 
       {/* ROADMAP SUMMARY BOX */}
       <div className="bg-white p-6 rounded shadow mb-6">

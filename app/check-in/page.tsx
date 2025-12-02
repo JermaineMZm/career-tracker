@@ -28,12 +28,19 @@ export default function CheckInPage() {
         content: workedOn,
         challenges,
     }).select().single();
+    
 
     if (error) {
         alert("Error saving check-in: " + error.message);
         setLoading(false);
         return;
     }
+
+    // UPDATE STREAK
+    await fetch("/api/update-streak", {
+    method: "POST",
+    });
+
 
     const checkInId = data.id;
 
