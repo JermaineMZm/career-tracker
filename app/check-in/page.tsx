@@ -15,33 +15,55 @@ export default function CheckInPage() {
     setLoading(true);
 
     const { data: { user } } = await supabase.auth.getUser();
-
     if (!user) {
-      alert("You must be logged in.");
-      setLoading(false);
-      return;
+        alert("You must be logged in.");
+        setLoading(false);
+        return;
     }
 
-    const { error } = await supabase.from("check_ins").insert({
-      user_id: user.id,
-      mood,
-      content: workedOn,
-      challenges,
-    });
+    // SAVE BASIC CHECK-IN FIRST
+    const { data, error } = await supabase.from("check_ins").insert({
+        user_id: user.id,
+        mood,
+        content: workedOn,
+        challenges,
+    }).select().single();
 
     if (error) {
-      alert("Error saving check-in: " + error.message);
-    } else {
-      alert("Check-in saved!");
-      setWorkedOn("");
-      setChallenges("");
-      setMood(5);
+        alert("Error saving check-in: " + error.message);
+        setLoading(false);
+        return;
     }
 
-    setLoading(false);
-  }
+    const checkInId = data.id;
 
-  return (
+    // CALL AI ROUTE
+    const aiRes = await fetch("/api/check-in-ai", {
+        method: "POST",
+        body: JSON.stringify({
+        checkInId,
+        mood,
+        content: workedOn,
+        challenges,
+        }),
+    });
+
+    const aiData = await aiRes.json();
+
+    if (aiData.error) {
+        alert("AI error: " + aiData.error);
+    } else {
+        alert("Check-in saved with AI insight!");
+        console.log("AI Output:", aiData.ai);
+    }
+
+    // RESET FORM
+    setWorkedOn("");
+    setChallenges("");
+    setMood(5);
+    setLoading(false);
+    }
+    return (
     <div className="max-w-xl mx-auto mt-10 bg-white p-6 rounded shadow text-black">
       <h1 className="text-3xl font-bold mb-6 text-black">Daily Check-In</h1>
 
