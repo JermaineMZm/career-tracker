@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/auth-helpers-nextjs";
 
-// MUST be async now because cookies() returns a Promise in Next.js 15
+// MUST be async because cookies() is async in Next.js 15
 export const supabaseServer = async () => {
   const cookieStore = await cookies();
 
@@ -11,14 +11,14 @@ export const supabaseServer = async () => {
     {
       cookies: {
         get(name: string) {
+          // Read-only cookies (allowed)
           return cookieStore.get(name)?.value;
         },
-        // Must NOT mutate cookies outside route handlers → no-op
-        set(name: string, value: string, options: CookieOptions) {
-          // no-op
+        set(_name: string, _value: string, _options: CookieOptions) {
+          // NO-OP — writing cookies here causes Next.js errors
         },
-        remove(name: string, options: CookieOptions) {
-          // no-op
+        remove(_name: string, _options: CookieOptions) {
+          // NO-OP — writing cookies here causes Next.js errors
         },
       },
     }
