@@ -31,17 +31,29 @@ export default async function DashboardPage() {
 
   const lastCheckIn = checkIns?.[0];
 
+  // Fetch streak stats
   const { data: userStats } = await supabase
-  .from("user_stats")
-  .select("*")
-  .eq("user_id", user.id)
-  .single();
+    .from("user_stats")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
 
+  // Fetch achievements
   const { data: achievements } = await supabase
-  .from("achievements")
-  .select("*")
-  .eq("user_id", user.id)
-  .order("unlocked_at", { ascending: false });
+    .from("achievements")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("unlocked_at", { ascending: false });
+
+  // Fetch today's tasks
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: dailyTasks } = await supabase
+    .from("daily_tasks")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("created_at", today)
+    .order("created_at");
 
   return (
     <div className="min-h-screen bg-gray-100 text-black p-10">
@@ -136,6 +148,36 @@ export default async function DashboardPage() {
         >
           Make a Check-In →
         </Link>
+      </div>
+
+      {/* TODAY'S TASKS */}
+      <div className="bg-white p-6 rounded shadow mb-6">
+        <h2 className="text-xl font-semibold mb-3">Today's Tasks</h2>
+
+        {!dailyTasks || dailyTasks.length === 0 ? (
+          <p>No tasks yet. Generate them using your check-ins or roadmap.</p>
+        ) : (
+          <ul className="space-y-3">
+            {dailyTasks.map((task) => (
+              <li key={task.id} className="flex items-center gap-3">
+                {/* Strike-through if completed */}
+                <span className={task.done ? "line-through text-gray-500" : ""}>
+                  {task.task_text}
+                </span>
+
+                {/* Roadmap-based task label */}
+                {(task.task_text.toLowerCase().includes("learn") ||
+                  task.task_text.toLowerCase().includes("build") ||
+                  task.task_text.toLowerCase().includes("project") ||
+                  task.task_text.toLowerCase().includes("skill")) && (
+                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                    Roadmap
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* QUICK ACTIONS */}
