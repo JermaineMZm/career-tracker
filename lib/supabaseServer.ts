@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient, type CookieOptions } from "@supabase/auth-helpers-nextjs";
 
+// MUST be async now because cookies() returns a Promise in Next.js 15
 export const supabaseServer = async () => {
   const cookieStore = await cookies();
 
@@ -12,11 +13,12 @@ export const supabaseServer = async () => {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options) {
-          cookieStore.set({ name, value, ...options });
+        // Must NOT mutate cookies outside route handlers → no-op
+        set(name: string, value: string, options: CookieOptions) {
+          // no-op
         },
-        remove(name: string, options) {
-          cookieStore.set({ name, value: "", ...options });
+        remove(name: string, options: CookieOptions) {
+          // no-op
         },
       },
     }
