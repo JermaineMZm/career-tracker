@@ -224,6 +224,39 @@ export default function RoadmapPage() {
   );
 }
 
+function TaskCreator({ dateKey, onCreated }: any) {
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+
+    async function createTask() {
+    if (!text.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/daily-tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: dateKey, task_text: text.trim() }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Failed to create');
+      const inserted = json.task;
+      onCreated(inserted);
+      setText("");
+    } catch (err: any) {
+      alert(err.message || 'Failed to create task');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex gap-2">
+      <input value={text} onChange={(e) => setText(e.target.value)} className="flex-1 p-2 border rounded" placeholder="New task" />
+      <button onClick={createTask} className="bg-blue-600 text-white px-3 py-1 rounded" disabled={saving}>{saving ? '...' : 'Add'}</button>
+    </div>
+  );
+}
+
 function CalendarMonth({
   monthLabel,
   items,
@@ -238,6 +271,11 @@ function CalendarMonth({
 }: any) {
   const [checkInsMap, setCheckInsMap] = useState<Record<string, any>>({});
   const [tasksMap, setTasksMap] = useState<Record<string, any[]>>({});
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalDate, setModalDate] = useState<string | null>(null);
+  const [modalCheckIn, setModalCheckIn] = useState<any>(null);
+  const [modalTasks, setModalTasks] = useState<any[]>([]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -351,7 +389,16 @@ function CalendarMonth({
           const suggestions = suggestionsByDay[dateKey] || [];
 
           return (
-            <div key={dateKey} className="relative group h-20 p-2 bg-white/40 rounded-lg border border-white/20 hover:shadow-lg transition-all">
+            <div
+              key={dateKey}
+              onClick={() => {
+                setModalDate(dateKey);
+                setModalCheckIn(checkInsMap[dateKey] || null);
+                setModalTasks(tasks || []);
+                setModalOpen(true);
+              }}
+              className="relative group h-20 p-2 bg-white/40 rounded-lg border border-white/20 hover:shadow-lg transition-all cursor-pointer"
+            >
               <div className="flex items-start justify-between">
                 <div className="text-sm font-medium text-gray-800">{c}</div>
                 {hasCheck && <div className="w-3 h-3 rounded-full bg-emerald-500 mt-1" />}
@@ -401,6 +448,76 @@ function CalendarMonth({
           );
         })}
       </div>
+
+      {/* Modal for day details */}
+      {modalOpen && modalDate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setModalOpen(false)} />
+          <div className="relative z-60 w-full max-w-2xl p-6 bg-white rounded-lg shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-lg font-bold">{displayLabel} — {modalDate}</h4>
+              <button className="text-sm text-gray-500" onClick={() => setModalOpen(false)}>Close</button>
+            </div>
+
+            {modalCheckIn ? (
+              <div>
+                <label className="block text-sm font-semibold">Mood</label>
+                <input type="range" min={1} max={10} value={modalCheckIn.mood || 5} onChange={(e) => setModalCheckIn({...modalCheckIn, mood: Number(e.target.value)})} className="w-full" />
+                <label className="block text-sm font-semibold mt-3">What did you work on?</label>
+                <textarea className="w-full p-2 border rounded" value={modalCheckIn.content || ''} onChange={(e) => setModalCheckIn({...modalCheckIn, content: e.target.value})} />
+                <label className="block text-sm font-semibold mt-3">Challenges</label>
+                <textarea className="w-full p-2 border rounded" value={modalCheckIn.challenges || ''} onChange={(e) => setModalCheckIn({...modalCheckIn, challenges: e.target.value})} />
+
+                <div className="flex gap-3 mt-4">
+                  <button
+                    className="bg-emerald-600 text-white px-4 py-2 rounded"
+                    onClick={async () => {
+                      setSaving(true);
+                      try {
+                        const res = await fetch(`/api/check-ins/${modalCheckIn.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ mood: modalCheckIn.mood, content: modalCheckIn.content, challenges: modalCheckIn.challenges }),
+                        });
+                        const json = await res.json();
+                        if (!res.ok) throw new Error(json?.error || 'Failed');
+                        const updated = json.checkIn;
+                        setCheckInsMap((prev) => ({ ...prev, [modalDate]: updated }));
+                        setModalCheckIn(updated);
+                      } catch (err: any) {
+                        alert(err.message || 'Failed to update');
+                      } finally {
+                        setSaving(false);
+                      }
+                    }}
+                  >{saving ? 'Saving...' : 'Save Check-In'}</button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="mb-3 text-sm text-gray-700">No check-in for this day.</div>
+                {modalTasks.length > 0 ? (
+                  <div className="space-y-2">
+                    {modalTasks.map((t) => (
+                      <div key={t.id} className="p-2 border rounded">{t.task_text}</div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500 mb-3">No tasks</div>
+                )}
+
+                <div className="mt-3">
+                  <label className="block text-sm font-semibold mb-1">Create a task for this day</label>
+                  <TaskCreator dateKey={modalDate} onCreated={(nt: any) => {
+                    setTasksMap((prev) => ({ ...prev, [modalDate]: [...(prev[modalDate]||[]), nt] }));
+                    setModalTasks((prev) => ([...prev, nt]));
+                  }} />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
