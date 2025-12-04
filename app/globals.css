@@ -33,3 +33,93 @@ body {
 input, label, button, p, span, div {
   color: #111 !important;
 }
+
+/* Global transitions */
+* {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Input styling */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  border-radius: 0.5rem;
+  border: 2px solid #e5e7eb;
+  background: linear-gradient(to bottom right, #f9fafb, #ffffff);
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+textarea:focus {
+  border-color: #667eea;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+input[type="range"] {
+  border: 0;
+}
+
+/* Button styling base */
+button {
+  font-weight: 600;
+  transition-property: all;
+  transition-duration: 200ms;
+}
+
+button:active {
+  transform: scale(0.95);
+}
+
+/* Utility classes for cards */
+.card {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #f3f4f6;
+  overflow: hidden;
+}
+
+.card:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  transition: all 300ms;
+}
+
+.card-gradient {
+  background: linear-gradient(to bottom right, #ffffff, #f3e8ff, #fce7f3);
+  border-radius: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e9d5ff;
+  overflow: hidden;
+}
+
+.card-gradient:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  transition: all 300ms;
+}
+
+.card-hover {
+  cursor: pointer;
+}
+
+.card-hover:hover {
+  transform: scale(1.05);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+}
+
+/* Text gradients */
+.text-gradient {
+  background: linear-gradient(to right, #9333ea, #ec4899, #dc2626);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Smooth scroll */
+html {
+  scroll-behavior: smooth;
+}

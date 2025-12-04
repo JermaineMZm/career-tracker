@@ -26,8 +26,16 @@ export default function AuthPage() {
   }, [router, supabase]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-bold text-gradient mb-3">🚀 CareerCoachAI</h1>
+          <p className="text-gray-600 text-lg">Your personal AI career coach</p>
+        </div>
+
+        {/* Auth Card */}
+        <div className="card-gradient p-8 shadow-2xl">
         <Auth
           supabaseClient={supabase}
           providers={[]}  
@@ -36,15 +44,19 @@ export default function AuthPage() {
             variables: {
               default: {
                 colors: {
-                  brand: "#2563eb",
-                  brandAccent: "#1d4ed8",
+                  brand: "#9333ea",
+                  brandAccent: "#7e22ce",
                   inputText: "#111",
-                  labelText: "#111",
                 },
               },
             },
           }}
-        />
+        />          <div className="mt-6 pt-6 border-t border-purple-200">
+            <p className="text-xs text-gray-500 text-center">
+              Join thousands of professionals building their dream careers
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
