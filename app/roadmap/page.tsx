@@ -7,7 +7,10 @@ export default function RoadmapPage() {
   const supabase = supabaseBrowser();
   const [user, setUser] = useState<any>(null);
   const [roadmap, setRoadmap] = useState<any>(null);
+  const [roadmapStart, setRoadmapStart] = useState<Date | null>(null);
   const [progress, setProgress] = useState<any[]>([]);
+  const [allCheckIns, setAllCheckIns] = useState<any[]>([]);
+  const [allDailyTasks, setAllDailyTasks] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
@@ -27,6 +30,13 @@ export default function RoadmapPage() {
 
     if (!roadmapRows?.length) return;
     setRoadmap(roadmapRows[0].roadmap_json);
+    // capture roadmap creation date as the roadmap start month
+    try {
+      const created = roadmapRows[0].created_at ? new Date(roadmapRows[0].created_at) : new Date();
+      setRoadmapStart(created);
+    } catch (e) {
+      setRoadmapStart(new Date());
+    }
 
     const { data: progressRows } = await supabase
       .from("roadmap_progress")
@@ -34,6 +44,23 @@ export default function RoadmapPage() {
       .eq("user_id", user.id);
 
     setProgress(progressRows || []);
+
+    // fetch all check-ins and daily tasks for user's timeline/calendar use
+    const { data: checkInsAll } = await supabase
+      .from("check_ins")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true });
+
+    setAllCheckIns(checkInsAll || []);
+
+    const { data: dailyTasksAll } = await supabase
+      .from("daily_tasks")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true });
+
+    setAllDailyTasks(dailyTasksAll || []);
   }
 
   async function toggleItem(type: string, name: string) {
@@ -182,10 +209,13 @@ export default function RoadmapPage() {
               monthLabel={month}
               items={items}
               color={sectionColors[idx % 4]}
-              supabase={supabase}
               user={user}
               isDone={isDone}
               toggleItem={toggleItem}
+              monthIndex={idx}
+              roadmapStart={roadmapStart}
+              allCheckIns={allCheckIns}
+              allDailyTasks={allDailyTasks}
             />
           ))}
         </div>
@@ -198,66 +228,53 @@ function CalendarMonth({
   monthLabel,
   items,
   color,
-  supabase,
   user,
   isDone,
   toggleItem,
+  monthIndex,
+  roadmapStart,
+  allCheckIns,
+  allDailyTasks,
 }: any) {
   const [checkInsMap, setCheckInsMap] = useState<Record<string, any>>({});
   const [tasksMap, setTasksMap] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     if (!user) return;
-    loadMonthData();
+    buildMonthData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, monthLabel]);
+  }, [user, monthLabel, monthIndex, roadmapStart, allCheckIns, allDailyTasks]);
 
-  async function loadMonthData() {
-    // Try to parse monthLabel like "January 2026" or "January"
-    const parsed = new Date(`${monthLabel} 1`);
-    const year = parsed.getFullYear();
-    const month = parsed.getMonth();
+  function buildMonthData() {
+    // compute the actual month by adding monthIndex to roadmapStart (or current month if missing)
+    const startBase = roadmapStart ? new Date(roadmapStart) : new Date();
+    const monthStart = new Date(startBase.getFullYear(), startBase.getMonth() + (monthIndex || 0), 1);
+    const year = monthStart.getFullYear();
+    const month = monthStart.getMonth();
 
-    // If parsing failed (Invalid Date), fallback to current month
-    const safeYear = isNaN(year) ? new Date().getFullYear() : year;
-    const safeMonth = isNaN(month) ? new Date().getMonth() : month;
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 1);
 
-    const start = new Date(safeYear, safeMonth, 1);
-    const end = new Date(safeYear, safeMonth + 1, 1);
-
-    const startISO = start.toISOString();
-    const endISO = end.toISOString();
-
-    // fetch check-ins in range
-    const { data: checkIns } = await supabase
-      .from("check_ins")
-      .select("*")
-      .eq("user_id", user.id)
-      .gte("created_at", startISO)
-      .lt("created_at", endISO);
-
+    // Build check-in map by filtering allCheckIns
     const checkMap: Record<string, any> = {};
-    (checkIns || []).forEach((c: any) => {
+    (allCheckIns || []).forEach((c: any) => {
       const d = new Date(c.created_at).toISOString().slice(0, 10);
-      checkMap[d] = c;
+      const dt = new Date(d + "T00:00:00Z");
+      if (dt >= start && dt < end) {
+        checkMap[d] = c;
+      }
     });
 
-    // fetch daily tasks in range (daily_tasks.created_at appears to be YYYY-MM-DD)
-    const startDate = start.toISOString().slice(0, 10);
-    const endDate = new Date(end.getTime() - 1).toISOString().slice(0, 10);
-
-    const { data: dailyTasks } = await supabase
-      .from("daily_tasks")
-      .select("*")
-      .eq("user_id", user.id)
-      .gte("created_at", startDate)
-      .lte("created_at", endDate);
-
+    // Build tasks map by filtering allDailyTasks
     const tasksMapLocal: Record<string, any[]> = {};
-    (dailyTasks || []).forEach((t: any) => {
+    (allDailyTasks || []).forEach((t: any) => {
+      // daily_tasks.created_at appears to be YYYY-MM-DD
       const d = t.created_at;
-      tasksMapLocal[d] = tasksMapLocal[d] || [];
-      tasksMapLocal[d].push(t);
+      const dt = new Date(d + "T00:00:00Z");
+      if (dt >= start && dt < end) {
+        tasksMapLocal[d] = tasksMapLocal[d] || [];
+        tasksMapLocal[d].push(t);
+      }
     });
 
     setCheckInsMap(checkMap);
@@ -266,25 +283,42 @@ function CalendarMonth({
 
   // build suggestions by distributing timeline items across days if no tasks exist
   const suggestionsByDay = useMemo(() => {
-    const parsed = new Date(`${monthLabel} 1`);
-    const safeYear = isNaN(parsed.getFullYear()) ? new Date().getFullYear() : parsed.getFullYear();
-    const safeMonth = isNaN(parsed.getMonth()) ? new Date().getMonth() : parsed.getMonth();
+    // compute month start from roadmapStart + monthIndex
+    const startBase = roadmapStart ? new Date(roadmapStart) : new Date();
+    const monthStart = new Date(startBase.getFullYear(), startBase.getMonth() + (monthIndex || 0), 1);
+    const safeYear = monthStart.getFullYear();
+    const safeMonth = monthStart.getMonth();
     const daysInMonth = new Date(safeYear, safeMonth + 1, 0).getDate();
     const map: Record<string, string[]> = {};
     if (!items || items.length === 0) return map;
-    items.forEach((it: string, i: number) => {
-      const day = Math.min(daysInMonth, Math.max(1, Math.floor((i / items.length) * daysInMonth) + 1));
-      const dateKey = new Date(safeYear, safeMonth, day).toISOString().slice(0, 10);
-      map[dateKey] = map[dateKey] || [];
-      map[dateKey].push(it);
-    });
-    return map;
-  }, [monthLabel, items]);
 
-  // render calendar grid
-  const parsed = new Date(`${monthLabel} 1`);
-  const safeYear = isNaN(parsed.getFullYear()) ? new Date().getFullYear() : parsed.getFullYear();
-  const safeMonth = isNaN(parsed.getMonth()) ? new Date().getMonth() : parsed.getMonth();
+    // Estimate duration: split month days proportionally across items
+    const reservedDays = Math.max(1, Math.floor(daysInMonth * 0.6));
+    const daysPerItem = Math.max(1, Math.floor(reservedDays / items.length));
+    let dayCursor = 1;
+
+    items.forEach((it: string, i: number) => {
+      // assign a block of days to this item
+      const startDay = dayCursor;
+      const endDay = Math.min(daysInMonth, dayCursor + daysPerItem - 1);
+      for (let d = startDay; d <= endDay; d++) {
+        const dateKey = new Date(safeYear, safeMonth, d).toISOString().slice(0, 10);
+        map[dateKey] = map[dateKey] || [];
+        // estimate hours per day (simple heuristic)
+        const hours = Math.max(1, Math.min(4, Math.round((4 * (1 / items.length)) + 0.5)));
+        map[dateKey].push(`${hours}h: ${it}`);
+      }
+      dayCursor = endDay + 1;
+    });
+
+    return map;
+  }, [monthIndex, roadmapStart, items]);
+
+  // render calendar grid for the actual month (roadmapStart + monthIndex)
+  const startBase = roadmapStart ? new Date(roadmapStart) : new Date();
+  const monthStart = new Date(startBase.getFullYear(), startBase.getMonth() + (monthIndex || 0), 1);
+  const safeYear = monthStart.getFullYear();
+  const safeMonth = monthStart.getMonth();
   const firstDay = new Date(safeYear, safeMonth, 1).getDay();
   const daysInMonth = new Date(safeYear, safeMonth + 1, 0).getDate();
 
