@@ -319,6 +319,8 @@ function CalendarMonth({
   const monthStart = new Date(startBase.getFullYear(), startBase.getMonth() + (monthIndex || 0), 1);
   const safeYear = monthStart.getFullYear();
   const safeMonth = monthStart.getMonth();
+  // human-friendly label like "January 2026"
+  const displayLabel = monthStart.toLocaleString(undefined, { month: "long", year: "numeric" });
   const firstDay = new Date(safeYear, safeMonth, 1).getDay();
   const daysInMonth = new Date(safeYear, safeMonth + 1, 0).getDate();
 
@@ -329,7 +331,7 @@ function CalendarMonth({
   return (
     <div className={`card p-6 bg-gradient-to-br ${color.bg} border-2 ${color.border}`}>
       <h3 className="text-2xl font-bold text-gradient mb-4 flex items-center gap-2">
-        <span>📅</span> {monthLabel}
+        <span>📅</span> {displayLabel}
       </h3>
 
       <div className="mb-4 text-sm text-gray-600">Click a day to view tasks or check-in details.</div>
@@ -367,7 +369,7 @@ function CalendarMonth({
 
               {/* Hover popover */}
               <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block w-64 p-3 bg-white rounded-lg shadow-lg border">
-                <div className="text-sm font-semibold mb-1">{monthLabel} {c}</div>
+                <div className="text-sm font-semibold mb-1">{displayLabel} {c}</div>
                 <div className="text-xs text-gray-700 space-y-2">
                   {hasCheck ? (
                     <div className="p-2 bg-emerald-50 rounded">
